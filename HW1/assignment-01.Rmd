@@ -158,8 +158,6 @@ p <- p + theme(axis.ticks = element_blank(), axis.text.x = element_blank(), axis
 p <- p + theme(panel.border = element_blank())
 print(p)
 
-p + map_crowd + map_gov
-
 
 
 # another source: https://map-rfun.library.duke.edu/01_georeference
@@ -196,6 +194,8 @@ A_crowd + B_govt
 
 The local newspaper in Pakistan, _Dawn_, claims that the government is misreporting the air pollution levels in Lahore. Do the locations of monitors in question 4, relative to crowd-sourced monitors, suggest anything about a possible political bias? 
 
+Yes, it appears the government is misreporting the air pollution levels in Lahore. As we can see in the previous question, the crowdsourced data monitores are pretty spread out, whereas the government monitors are much fewer in number, and clustered in the northeast part of Lahore.
+
 ## Question 6:
 
 Given the recent corruption in air quality reporting, the Prime Minister of Pakistan has hired an independent body of  environmental data scientists to create an unbiased estimate of the mean PM 2.5 across Lahore using some combination of both government stations and crowd sourced observations. 
@@ -208,11 +208,117 @@ First, generate a _random sample_ of size $n=1000$ air pollution records by (i) 
 
 ```{r, include = TRUE, eval = TRUE}
 
+# using law of large numbers notes from lab class 
+
+set.seed(1234)
+sims <- 1000
+
+sample_means = list()
+for (n in 1:sims) {
+  x = rnorm(n, mean=89.2, sd=1)
+  sample_means[[n]] = sum(x)/n
+}
+
+
+n = seq(1,sims,1)
+lln_df = as.data.frame(cbind(n,sample_means))
+lln_df[,] = lapply(lln_df[,], as.numeric)
+
+ggplot(data = lln_df) +
+  geom_line(aes(x = n, y = sample_means)) +
+  geom_hline(yintercept = 89.2) +
+  labs(x = "Sample Size", y = "Sample Mean") +
+  theme_bw()
+
+
+# using this source: https://www.statology.org/dplyr-bind_rows-bind_cols/#:~:text=You%20can%20use%20the%20bind_rows,%2C%20df3%2C%20...) AND https://statology.org/random-sample-in-r/
+# pooled <- bind_rows(crowdsourced, govt)
+
+# random_sample <- sample(pooled, size = 1000, replace = TRUE)
+
+# I feel like binding the rows together wasn't the right choice. Here is another approach:
+
+merged <- merge(crowdsourced, govt, by = c("date", "PM", "latitude", "longitude"), all = TRUE)
+
+random_sample_2 <- sample(merged, size = 1000, replace = TRUE)
+
 ```
 
 Second, create a _stratified random sample_. Do so by (i) stratifying your pooled data-set into strata of 0.01 degrees of latitude, and (ii) randomly sampling 200 air pollution observations from each stratum. 
 
 ```{r, include = TRUE, eval = TRUE}
+
+#random_sample <- random_sample[order(random_sample$latitude), ]
+
+#min_lat <- min(random_sample$latitude)
+#max_lat <- max(random_sample$latitude)
+#stratum_width <- 0.01
+
+#random_sample$latitude_stratum <- cut(random_sample$latitude, 
+                                   #  breaks = seq(min_lat, max_lat, by = stratum_width),
+                                   #  labels = FALSE,
+                                   #  include.lowest = TRUE)
+# The 'latitude_stratum' column now contains the information about which stratum each observation belongs to
+
+### NOT WORKING (next 9 lines - run the lines after "checking" first)
+# Set the seed for reproducibility
+#set.seed(123)
+
+# Group by latitude_stratum and sample 200 observations from each stratum
+#sampled_data <- random_sample %>%
+ # group_by(latitude_stratum) %>%
+ # slice_sample(n = 200, replace = FALSE)
+
+# 'sampled_data' now contains 200 randomly sampled observations from each stratum
+
+
+### checking 
+#unique(pooled$latitude)
+
+# Identify which columns in your dataset have duplicate names. You can use the duplicated function to check for duplicated column names
+#duplicated_cols <- random_sample %>%
+#  names() %>%
+#  duplicated()
+
+#print(names(random_sample)[duplicated_cols])
+
+# Alternatively, you can use the make.names function to generate unique names:
+#names(random_sample) <- make.names(names(random_sample), unique = TRUE)
+
+
+
+
+
+
+
+
+# I feel like binding the rows together wasn't the right choice. Here is another approach:
+
+merged <- merge(crowdsourced, govt, by = c("date", "PM", "latitude", "longitude"), all = TRUE)
+
+random_sample_2 <- sample(merged, size = 1000, replace = TRUE)
+
+random_sample_2 <- random_sample_2[order(random_sample_2$latitude), ]
+
+min_lat <- min(random_sample_2$latitude)
+max_lat <- max(random_sample_2$latitude)
+stratum_width <- 0.01
+
+random_sample_2$latitude_stratum <- cut(random_sample_2$latitude, 
+                                     breaks = seq(min_lat, max_lat, by = stratum_width),
+                                     labels = FALSE,
+                                     include.lowest = TRUE)
+# The 'latitude_stratum' column now contains the information about which stratum each observation belongs to
+
+# Set the seed for reproducibility
+set.seed(123)
+
+# Group by latitude_stratum and sample 200 observations from each stratum
+sampled_data <- random_sample_2 %>%
+  group_by(latitude_stratum) %>%
+  slice_sample(n = 200, replace = FALSE)
+
+# 'sampled_data' now contains 200 randomly sampled observations from each stratum
 
 ```
 
@@ -220,6 +326,24 @@ Second, create a _stratified random sample_. Do so by (i) stratifying your poole
 
 Compare estimated means of PM 2.5 for each sampling strategy to the NASA estimate of 89.2 $\mu g/m^3$. Which sample seems to match the satellite data best? What would you recommend the Prime Minister do? Does your proposed sampling strategy rely more on government or on crowd-sourced data? Why might that be the case?  
 
+The proposed sampling is MUCH closer to the NASA estimate. Therefore, it much rely more heavily on the crowdsourced data. This might be the case because (1) there were many more individual observations in the crowdsourced data (2) there was more variety in the location of the crowdsourced data, and therefore they were represented in more strata. I would recommend that the Prime Minister utilize this strategy, and that they require third party data analysis for environmental topics, such as air pollution, in order to reduce mis-represented data that paints a more favorable, yet inaccurate picture of reality. 
+
 ```{r, include = TRUE, eval = TRUE}
+
+# 'sampled_data' now contains 200 randomly sampled observations from each stratum
+
+min(sampled_data$PM) # 15
+max(sampled_data$PM) # 120
+mean(sampled_data$PM) # 64.1
+
+### as compared to earlier in this assignment, this data:
+mean(crowdsourced$PM) # equals 70.2008
+mean(govt$PM) # equals 39.64694
+
+min(crowdsourced$PM) # equals 20
+min(govt$PM) # equals 15
+
+max(crowdsourced$PM) # equals 120
+max(govt$PM) # equals 65
 
 ```
