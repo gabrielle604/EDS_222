@@ -21,9 +21,11 @@ library(gt)
 library(tufte)
 
 # Set your file path here! Or, set this up as an .Rproj if you'd like.
-# rootdir <- ("YOUR FILE PATH HERE")
-# datadir <- file.path(rootdir,"data","HW1") # make sure this file path makes sense for your computer
-# setwd(file.path(rootdir,"homework","HW1")) # make sure this file path makes sense for your computer
+rootdir <- "/Users/gabriellebenoit/Documents/GitHub/EDS_222"
+
+source(file.path(rootdir,"labs","_common.R"))
+
+
 ``` 
 
 _(The case study in this exercise is based on reality, but does not include actual observational data.)_
@@ -50,8 +52,8 @@ In answering the following questions, please consider the lecture content from c
 Load the data from each source and label it as `crowdsourced` and `govt` accordingly. For example: 
 
 ```{r}
-crowdsourced <- readRDS("/courses/EDS222/data/HW1/airpol-PK-crowdsourced.RDS")
-govt <- readRDS("/courses/EDS222/data/HW1/airpol-PK-govt.RDS")
+crowdsourced <- readRDS("/Users/gabriellebenoit/Documents/GitHub/EDS_222/HW1/data/airpol-PK-crowdsourced.RDS")
+govt <- readRDS("/Users/gabriellebenoit/Documents/GitHub/EDS_222/HW1/data/airpol-PK-govt.RDS")
 ```
 1. These dataframes have one row per pollution observation. How many pollution records are in each dataset? 
 
@@ -140,6 +142,53 @@ Use the location of the air pollution stations for both of the sampling strategi
 
 
 ```{r, include = TRUE, out.width = "100%", echo = FALSE, fig.margin = TRUE}
+
+# used this code: https://stackoverflow.com/questions/17723822/administrative-regions-map-of-a-country-with-ggmap-and-ggplot2
+# this isn't quite right, and I can't figure out how to fix it
+
+data(world.cities)
+Pakistan <- data.frame(map("world", "Pakistan", plot=FALSE)[c("x","y")])
+
+p <- ggplot(Pakistan, aes(x=x, y=y)) +
+     geom_path(colour = 'brown', linestyle = 2) +
+     coord_map() + theme_bw()
+p <- p + labs(x=" ", y=" ")
+p <- p + theme(panel.grid.minor=element_blank(), panel.grid.major=element_blank())
+p <- p + theme(axis.ticks = element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank())
+p <- p + theme(panel.border = element_blank())
+print(p)
+
+p + map_crowd + map_gov
+
+
+
+# another source: https://map-rfun.library.duke.edu/01_georeference
+
+library(tidyverse)
+library(sf)
+#install.packages("mapview")
+library(mapview)
+
+# great map!
+## crowdsources data
+mapview(crowdsourced, xcol = "longitude", ycol = "latitude", crs = 4269, grid = FALSE)
+
+# alternative map
+pakistan_pollution_crowd <- st_as_sf(crowdsourced, coords = c("longitude", "latitude"),  crs = 4326)
+mapview(pakistan_pollution_crowd, map.types = "Stamen.Toner") 
+
+## government data
+mapview(govt, xcol = "longitude", ycol = "latitude", crs = 4269, grid = FALSE)
+
+# alternative map
+pakistan_pollution_govt <- st_as_sf(govt, coords = c("longitude", "latitude"),  crs = 4326)
+mapview(pakistan_pollution_govt, map.types = "Stamen.Toner") 
+
+# does this work?
+A_crowd <- mapview(crowdsourced, xcol = "longitude", ycol = "latitude", crs = 4269, grid = FALSE)
+B_govt <- mapview(govt, xcol = "longitude", ycol = "latitude", crs = 4269, grid = FALSE)
+
+A_crowd + B_govt
 
 ```
 
