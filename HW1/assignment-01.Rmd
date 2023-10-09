@@ -57,12 +57,11 @@ govt <- readRDS("/Users/gabriellebenoit/Documents/GitHub/EDS_222/HW1/data/airpol
 ```
 1. These dataframes have one row per pollution observation. How many pollution records are in each dataset? 
 
+In the crowdsourced dataset, there are 5,488 pollution records. In the govt dataset, there are 1,960 pollution records.
 ```{r}
 dim(crowdsourced)
 
 dim(govt)
-
-# In the crowdsourced dataset, there are 5,488 pollution records. In the govt dataset, there are 1,960 pollution records.
 
 ```
 
@@ -70,13 +69,31 @@ dim(govt)
 
 cur_group_id() gives a unique numeric identifier for the current group.
 
+Crowdsourced data: 14 unique locations
+Government data: 5 unique locations
+
 
 ```{r}
-crowdsourced %>% group_by(longitude,latitude)
-crowdsourced %>% mutate(id = cur_group_id())
+crowd_unique <- crowdsourced %>% group_by(longitude,latitude) %>% mutate(id = cur_group_id())
 
-govt %>% group_by(longitude, latitude)
-govt %>% mutate(id = cur_group_id())
+govt_unique <- govt %>% group_by(longitude, latitude) %>% mutate(id = cur_group_id())
+
+
+
+options(pillar.sigfig=4) # I don't think this is doing anything... 
+unique_obs_crowd <- crowdsourced %>%
+  group_by(longitude, latitude) %>%
+  summarize(count = n())
+# I think this is telling me there are 14 unique locations (latitude and longitudes) with 392 observations in each
+# 392*14 = 5488, which is the # of observations in the data set
+
+options(pillar.sigfig=4)
+unique_obs_govt <- govt %>%
+  group_by(longitude, latitude) %>%
+  summarize(count = n())
+# I think this is telling me there are 5 unique locations (latitude and longitudes) with 392 observations in each
+# 392*5 = 1960, which is the # of observations in the data set
+
 ```
 
 ## Question 2:
@@ -304,10 +321,7 @@ min_lat <- min(random_sample_2$latitude)
 max_lat <- max(random_sample_2$latitude)
 stratum_width <- 0.01
 
-random_sample_2$latitude_stratum <- cut(random_sample_2$latitude, 
-                                     breaks = seq(min_lat, max_lat, by = stratum_width),
-                                     labels = FALSE,
-                                     include.lowest = TRUE)
+random_sample_2$latitude_stratum <- cut_interval(random_sample_2$latitude, length = stratum_width)
 # The 'latitude_stratum' column now contains the information about which stratum each observation belongs to
 
 # Set the seed for reproducibility
@@ -320,21 +334,37 @@ sampled_data <- random_sample_2 %>%
 
 # 'sampled_data' now contains 200 randomly sampled observations from each stratum
 
+options(pillar.sigfig=4)
+unique(random_sample_2$latitude_stratum)
+# [1] [31.55,31.56] (31.56,31.57] (31.57,31.58] (31.58,31.59] (31.59,31.6]  (31.6,31.61] 
+# Levels: [31.55,31.56] (31.56,31.57] (31.57,31.58] (31.58,31.59] (31.59,31.6] (31.6,31.61]
+
+
 ```
 
 ### Question 6.2:
 
 Compare estimated means of PM 2.5 for each sampling strategy to the NASA estimate of 89.2 $\mu g/m^3$. Which sample seems to match the satellite data best? What would you recommend the Prime Minister do? Does your proposed sampling strategy rely more on government or on crowd-sourced data? Why might that be the case?  
 
-The proposed sampling is MUCH closer to the NASA estimate. Therefore, it much rely more heavily on the crowdsourced data. This might be the case because (1) there were many more individual observations in the crowdsourced data (2) there was more variety in the location of the crowdsourced data, and therefore they were represented in more strata. I would recommend that the Prime Minister utilize this strategy, and that they require third party data analysis for environmental topics, such as air pollution, in order to reduce mis-represented data that paints a more favorable, yet inaccurate picture of reality. 
+The proposed stratified sampling is much closer to the NASA estimate than the only random sampling technique, the crowdsourced data, and the govt data. Therefore, the stratification must rely more heavily on the crowdsourced data. This might be the case because (1) there were many more individual observations in the crowdsourced data (2) there was more variety in the location of the crowdsourced data, and therefore they were represented in more strata. I would recommend that the Prime Minister utilize the stratified sampling strategy, and that they require third party data analysis for environmental topics, such as air pollution, in order to reduce mis-represented data that paints a more favorable, yet inaccurate picture of reality. 
+
+A stratified sample draws observations based on categories (in this case, bins of 0.01 degrees latitude), which ensures that the diversity/heterogeneity of the population is captured when the sampling occurs. in this case, after forming the bins (stratifying the population by 0.01 degrees latitude), then random samples are independently selected from each stratum. 
+A random sample simply selects observations from the population by chance (every observation has the same likelihood of being selected), and does not take into account any specific characteristics of interest. 
+In our situation, we wanted to accurately represented as many locations in Lahore, Pakistan that have air pollution monitors, and so stratifying by latitude ensures that we select observations from a variety of latitudes within the city, within our dataset, and avoid getting samples that happen (by chance) to be all near each other (... or away from pollution hubs).
+
+Mean of Random Sample = 62.2
+
+Mean of Stratified Sample = 66.4
+
+Mean of Crowdsourced Data = 70.2
+
+Mean of Government Data = 39.6
 
 ```{r, include = TRUE, eval = TRUE}
 
-# 'sampled_data' now contains 200 randomly sampled observations from each stratum
+mean(random_sample_2$PM) # 62.2
 
-min(sampled_data$PM) # 15
-max(sampled_data$PM) # 120
-mean(sampled_data$PM) # 64.1
+mean(sampled_data$PM) # 66.4
 
 ### as compared to earlier in this assignment, this data:
 mean(crowdsourced$PM) # equals 70.2008
